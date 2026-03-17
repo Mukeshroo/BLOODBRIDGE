@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BloodBridge – Emergency Blood Network</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
+  <!-- BloodBridge Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Leaflet Map JS (loaded before app scripts) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+
+  <!-- ── TOAST CONTAINER ── -->
+  <div class="tc" id="tc"></div>
+
+  <!-- ── NOTIFICATION PANEL ── -->
+  <div class="np" id="np">
+    <div class="nph">
+      <span>Notifications</span>
+      <span style="font-size:.72rem;color:var(--muted);cursor:pointer;font-weight:400" onclick="clearNotifs()">Clear all</span>
+    </div>
+    <div id="nl"></div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       NAVBAR
+  ════════════════════════════════════ -->
+  <nav>
+    <a href="#home" class="nav-logo">
+      <div class="logo-icon">
+        <!-- Blood Drop + Cross SVG Logo -->
+        <svg width="20" height="22" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 1 C10 1 2 9.5 2 14 C2 18.4 5.6 22 10 22 C14.4 22 18 18.4 18 14 C18 9.5 10 1 10 1Z" fill="white" opacity="0.95"/>
+          <rect x="8.5" y="9"   width="3" height="9" rx="1.5" fill="#E8192C"/>
+          <rect x="6"   y="11.5" width="8" height="3" rx="1.5" fill="#E8192C"/>
+        </svg>
+      </div>
+      <div>
+        <span class="logo-text">BloodBridge</span>
+        <span class="logo-sub">EMERGENCY NETWORK</span>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      <a class="active" onclick="sTo('home')">Home</a>
+      <a onclick="sTo('dashboard')">Live Dashboard</a>
+      <a onclick="sTo('map')">Donor Map</a>
+      <a onclick="sTo('register')">Register as Donor</a>
+      <a onclick="sTo('dbAdmin')" style="color:var(--blue)"><i class="fas fa-database" style="font-size:.72rem"></i> Database</a>
+    </div>
+
+    <div class="nav-right">
+      <!-- Language Selector -->
+      <div class="lang-wrapper">
+        <button class="lang-btn" onclick="toggleLang()" id="lbtn">
+          <i class="fas fa-globe"></i> EN <i class="fas fa-chevron-down" style="font-size:.58rem"></i>
+        </button>
+        <div class="lang-dropdown" id="ldd">
+          <div class="lang-opt" onclick="setLang('en')">🇺🇸 English</div>
+          <div class="lang-opt" onclick="setLang('hi')">🇮🇳 हिंदी</div>
+        </div>
+      </div>
+
+      <!-- Notification Bell -->
+      <div class="notif-btn" onclick="toggleNotif()" title="Notifications">
+        <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8.5 1.5 C5.46 1.5 3 3.96 3 7 L3 11 L1.5 13 L15.5 13 L14 11 L14 7 C14 3.96 11.54 1.5 8.5 1.5Z" fill="currentColor" opacity="0.9"/>
+          <path d="M6.5 13 C6.5 14.1 7.4 15 8.5 15 C9.6 15 10.5 14.1 10.5 13" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <circle cx="8.5" cy="1.8" r="1" fill="currentColor"/>
+        </svg>
+        <div class="nbadge" id="nbadge">3</div>
+      </div>
+
+      <button class="emg-btn" onclick="openM('emgM')"><i class="fas fa-exclamation-triangle"></i> Emergency</button>
+      <button class="login-btn" id="lbtnMain" onclick="openM('loginM')">Login</button>
+      <div class="user-av" id="uav" onclick="openM('myProfM')">M</div>
+    </div>
+  </nav>
+
+
+  <!-- ════════════════════════════════════
+       HERO
+  ════════════════════════════════════ -->
+  <section class="hero" id="home">
+    <div class="hero-bg">
+      <div class="hbg-grad"></div>
+      <canvas class="ecg-c" id="ecgC"></canvas>
+      <div id="ptcls"></div>
+    </div>
+    <div class="hero-con">
+      <div class="hbadge"><i class="fas fa-heart"></i> India's #1 Blood Donation Network</div>
+      <h1>Every Drop Counts.<span>Save a Life Today.</span></h1>
+      <p>Join thousands of donors ready to respond in critical moments. Find blood when you need it most, instantly — across every city in India.</p>
+      <div class="hacts">
+        <button class="btn-p" onclick="openM('emgM')"><i class="fas fa-exclamation-circle"></i> Emergency Request</button>
+        <button class="btn-s" onclick="sTo('register')"><i class="fas fa-user-plus"></i> Register as Donor</button>
+      </div>
+      <div class="hsearch">
+        <input type="text" placeholder="Enter your city..." id="cSrch">
+        <select id="bSrch">
+          <option value="">All</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+        <button onclick="doSearch()"><i class="fas fa-search"></i></button>
+      </div>
+      <div class="stats-r">
+        <div class="stat-i"><div class="snum" id="s1">0</div><div class="slbl">Registered Donors</div></div>
+        <div class="stat-i"><div class="snum" id="s2">0</div><div class="slbl">Lives Saved</div></div>
+        <div class="stat-i"><div class="snum" id="s3">0</div><div class="slbl">Blood Requests</div></div>
+        <div class="stat-i"><div class="snum" id="s4">0</div><div class="slbl">Cities Covered</div></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       DONORS SECTION
+  ════════════════════════════════════ -->
+  <section class="section donors-s" id="donors">
+    <div class="sec-h">
+      <div class="tag">Available Donors</div>
+      <h2>Find Donors Nearby</h2>
+      <p>Scan from thousands of heroes ready to donate</p>
+    </div>
+    <div class="bfilters">
+      <button class="fbtn active" onclick="fDonors('all',this)">All</button>
+      <button class="fbtn" onclick="fDonors('A+',this)">A+</button>
+      <button class="fbtn" onclick="fDonors('A-',this)">A−</button>
+      <button class="fbtn" onclick="fDonors('B+',this)">B+</button>
+      <button class="fbtn" onclick="fDonors('B-',this)">B−</button>
+      <button class="fbtn" onclick="fDonors('O+',this)">O+</button>
+      <button class="fbtn" onclick="fDonors('O-',this)">O−</button>
+      <button class="fbtn" onclick="fDonors('AB+',this)">AB+</button>
+      <button class="fbtn" onclick="fDonors('AB-',this)">AB−</button>
+    </div>
+    <div class="dgrid" id="dgrid"></div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       LIVE DASHBOARD
+  ════════════════════════════════════ -->
+  <section class="section dash-s" id="dashboard">
+    <div class="dash-hdr">
+      <div>
+        <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.3rem">
+          <div style="background:rgba(232,25,44,.1);border-radius:10px;padding:.45rem">
+            <i class="fas fa-heartbeat" style="color:var(--red)"></i>
+          </div>
+          <span style="font-family:var(--font-head);font-size:1.45rem;font-weight:800">Live Dashboard</span>
+          <span class="live-ind"><span class="ldot"></span>LIVE</span>
+        </div>
+        <p style="color:var(--muted);font-size:.82rem">Real-time emergency blood requests</p>
+      </div>
+      <div class="dstats">
+        <div class="dstat"><div class="dsnum" id="dashT">4</div><div class="dslbl">Total Active</div></div>
+        <div class="dstat crit"><div class="dsnum" id="dashC">● 2</div><div class="dslbl">Critical Needs</div></div>
+      </div>
+    </div>
+    <div class="rqgrid" id="rqgrid"></div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       DONOR MAP (Leaflet)
+  ════════════════════════════════════ -->
+  <section class="section map-s" id="map">
+    <div class="sec-h">
+      <div class="tag">Live Map</div>
+      <h2>Donor Map — India</h2>
+      <p>Interactive real map — click any pin to contact a donor</p>
+    </div>
+    <div class="map-wrap">
+      <div class="mctrl">
+        <button class="mctrl-btn active" onclick="setMF('all',this)">All Donors</button>
+        <button class="mctrl-btn" onclick="setMF('A+',this)">A+</button>
+        <button class="mctrl-btn" onclick="setMF('B+',this)">B+</button>
+        <button class="mctrl-btn" onclick="setMF('O+',this)">O+</button>
+        <button class="mctrl-btn" onclick="setMF('O-',this)">O−</button>
+        <button class="mctrl-btn" onclick="setMF('AB+',this)">AB+</button>
+        <button class="mctrl-btn" onclick="setMF('AB-',this)">AB−</button>
+      </div>
+      <div id="mapCon">
+        <div class="map-legend">
+          <h4>Blood Types</h4>
+          <div class="leg-item"><div class="ldot2" style="background:#e8192c"></div>A+ / A−</div>
+          <div class="leg-item"><div class="ldot2" style="background:#3b82f6"></div>B+ / B−</div>
+          <div class="leg-item"><div class="ldot2" style="background:#22c55e"></div>O+ / O−</div>
+          <div class="leg-item"><div class="ldot2" style="background:#a855f7"></div>AB+ / AB−</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       REGISTER AS DONOR
+  ════════════════════════════════════ -->
+  <section class="section reg-s" id="register">
+    <div class="sec-h">
+      <div class="tag">Join Us</div>
+      <h2>Register as Donor</h2>
+      <p>Your single registration can save multiple lives</p>
+    </div>
+    <div class="fcard">
+      <div class="fsh"><i class="fas fa-user"></i> Personal Information</div>
+      <div class="frow tri">
+        <div class="fg"><label>Full Name <span>*</span></label><input class="fi" id="rn" placeholder="Enter your full name"></div>
+        <div class="fg"><label>Age <span>*</span></label><input class="fi" id="ra" type="number" placeholder="18–65" min="18" max="65"></div>
+        <div class="fg"><label>Blood Group <span>*</span></label>
+          <select class="fi" id="rb">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fsh"><i class="fas fa-map-marker-alt"></i> Contact & Location</div>
+      <div class="frow">
+        <div class="fg"><label>Phone <span>*</span></label><input class="fi" id="rph" placeholder="+91" type="tel"></div>
+        <div class="fg"><label>Email</label><input class="fi" id="rem" placeholder="Optional" type="email"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>City <span>*</span></label><input class="fi" id="rci" placeholder="E.g. Mumbai"></div>
+        <div class="fg"><label>State <span>*</span></label><input class="fi" id="rst" placeholder="E.g. Maharashtra"></div>
+      </div>
+
+      <div class="fsh"><i class="fas fa-file-medical"></i> Medical History</div>
+      <div class="fg"><label>Last Donation Date</label><input class="fi" id="rld" type="date"></div>
+      <div class="fg"><label>Any Medical Conditions? (Optional)</label>
+        <textarea class="fi" id="rmc" rows="3" placeholder="List any ongoing medications or conditions..."></textarea>
+      </div>
+
+      <!-- Blood Disease Disqualification -->
+      <div style="background:rgba(232,25,44,.06);border:1px solid rgba(232,25,44,.2);border-radius:14px;padding:1.1rem;margin-bottom:1rem">
+        <div style="font-size:.8rem;font-weight:700;color:var(--red);margin-bottom:.7rem;text-transform:uppercase;letter-spacing:.5px">
+          <i class="fas fa-exclamation-triangle"></i> Disqualifying Conditions — check if you have any:
+        </div>
+        <div id="diseaseChecklist" style="display:grid;grid-template-columns:1fr 1fr;gap:.45rem"></div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.6rem">
+          <i class="fas fa-info-circle"></i> Donors with any of these conditions are not eligible to donate blood.
+        </div>
+      </div>
+      <div id="diseaseWarning" style="display:none;background:rgba(232,25,44,.1);border:1px solid rgba(232,25,44,.3);border-radius:10px;padding:.9rem;font-size:.8rem;color:var(--red);margin-bottom:1rem;line-height:1.5"></div>
+
+      <div class="fg">
+        <label>Blood Medical Report </label>
+        <div class="upload-a" onclick="document.getElementById('rf').click()">
+          <div style="font-size:2rem;color:var(--muted);margin-bottom:.4rem"><i class="fas fa-cloud-upload-alt"></i></div>
+          <div style="font-size:.82rem;color:var(--muted)">Click or drag your report here<br><small>Accepted: PDF, JPG, PNG · Max 5MB</small></div>
+          <input type="file" id="rf" style="display:none" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div id="reportPreview" style="font-size:.78rem;color:var(--green);margin-top:.4rem;font-weight:600"></div>
+      </div>
+      <div class="trow">
+        <span style="font-size:.83rem;font-weight:600"><i class="fas fa-check-circle" style="color:var(--green);margin-right:.4rem"></i>Available to donate right now</span>
+        <div class="toggle on" id="avt" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:.6rem;font-size:.78rem;color:var(--muted);margin-bottom:.5rem">
+        <input type="checkbox" id="tc2" style="margin-top:2px;accent-color:var(--red)">
+        <label for="tc2">I agree to the terms * — I confirm that I am registering voluntarily. My details can be shared with patients in need of emergency blood.</label>
+      </div>
+      <button class="sub-btn" onclick="regDonor()"><i class="fas fa-heart"></i> Register as Donor</button>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       POPULAR CITIES
+  ════════════════════════════════════ -->
+  <section class="cities-s">
+    <div class="sec-h">
+      <div class="tag">Popular Cities</div>
+      <h2>Find Blood Donors</h2>
+      <p>Blood donors in major cities across India</p>
+    </div>
+    <div class="cgrid" id="cgrid"></div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       TESTIMONIALS
+  ════════════════════════════════════ -->
+  <section class="section test-s">
+    <div class="sec-h">
+      <div class="tag">Success Stories</div>
+      <h2>Real Lives Saved</h2>
+      <p>Real stories from our community members</p>
+    </div>
+    <div class="tgrid">
+      <div class="tcard">
+        <div class="tauth"><div class="tav">P</div><div><div style="font-weight:600;font-size:.88rem">Priya Sharma</div><div style="font-size:.73rem;color:var(--muted)">Delhi · <span style="background:rgba(232,25,44,.15);color:var(--red);padding:.1rem .3rem;border-radius:4px;font-weight:700">B+</span></div></div></div>
+        <div class="ttxt">"Found a donor within 2 hours for my father's emergency surgery. BloodBridge saved his life!"</div>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="tcard">
+        <div class="tauth"><div class="tav">R</div><div><div style="font-weight:600;font-size:.88rem">Raj Kumar</div><div style="font-size:.73rem;color:var(--muted)">Mumbai · <span style="background:rgba(232,25,44,.15);color:var(--red);padding:.1rem .3rem;border-radius:4px;font-weight:700">O-</span></div></div></div>
+        <div class="ttxt">"Being a regular donor through this platform gives me immense satisfaction. Easy to use and reliable."</div>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="tcard">
+        <div class="tauth"><div class="tav">D</div><div><div style="font-weight:600;font-size:.88rem">Dr. Meera Patel</div><div style="font-size:.73rem;color:var(--muted)">Ahmedabad · <span style="background:rgba(232,25,44,.15);color:var(--red);padding:.1rem .3rem;border-radius:4px;font-weight:700">A+</span></div></div></div>
+        <div class="ttxt">"As a doctor, I recommend BloodBridge. The immediate matching process is incredible."</div>
+        <div class="stars">★★★★★</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       DATABASE ADMIN PANEL
+  ════════════════════════════════════ -->
+  <section class="db-s" id="dbAdmin">
+    <div class="sec-h">
+      <div class="tag" style="background:rgba(59,130,246,.12);color:var(--blue)">Data Records</div>
+      <h2><i class="fas fa-database" style="color:var(--blue)"></i> Live Database Records</h2>
+      <p>All registered data — donors, requests, users and messages</p>
+    </div>
+    <div style="max-width:1100px;margin:0 auto">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-bottom:2rem" id="dbSt"></div>
+      <div class="dbtabs" style="display:none">
+        <button class="dbtab active" onclick="showDbt('donors',this)"><i class="fas fa-heart"></i> Donors</button>
+        <button class="dbtab" onclick="showDbt('users',this)"><i class="fas fa-users"></i> Users</button>
+        <button class="dbtab" onclick="showDbt('requests',this)"><i class="fas fa-exclamation-circle"></i> Requests</button>
+        <button class="dbtab" onclick="showDbt('messages',this)"><i class="fas fa-comment"></i> Messages</button>
+      </div>
+      <div class="dbtw" style="display:none">
+        <table class="dbt">
+          <thead id="dbTh"></thead>
+          <tbody id="dbTb"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════
+       CTA + FOOTER
+  ════════════════════════════════════ -->
+  <section class="cta-s">
+    <div style="font-size:2rem;margin-bottom:1rem">🚨</div>
+    <h2>Emergency Blood Needed?</h2>
+    <p>Call our 24/7 helpline or broadcast a request to all nearby donors immediately.</p>
+    <div class="cta-btns">
+      <button class="btn-p" onclick="showT('Calling helpline...','info')"><i class="fas fa-phone"></i> Call: +91 12345 67890</button>
+      <button class="btn-s" onclick="sTo('dashboard')"><i class="fas fa-tachometer-alt"></i> View Live Dashboard</button>
+    </div>
+  </section>
+
+  <footer>© 2026 BloodBridge Emergency Network · Made with ❤️ for India · Powered by IndexedDB + Leaflet Maps</footer>
+
+
+  <!-- ════════════════════════════════════
+       FAB BUTTONS
+  ════════════════════════════════════ -->
+  <div class="fab-g">
+    <div class="fabw">
+      <span class="fabl">SOS Emergency</span>
+      <button class="fab fab-sos" onclick="openM('emgM')">
+        <!-- Blood drop + exclamation -->
+        <svg width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1 C12 1 2 11 2 17 C2 21.9 6.6 26 12 26 C17.4 26 22 21.9 22 17 C22 11 12 1 12 1Z" fill="white" opacity="0.95"/>
+          <rect x="11" y="9" width="2" height="8" rx="1" fill="#E8192C"/>
+          <circle cx="12" cy="20" r="1.2" fill="#E8192C"/>
+        </svg>
+      </button>
+    </div>
+    <div class="fabw">
+      <span class="fabl">BloodBot Chat</span>
+      <button class="fab fab-chat" onclick="openM('chatM')">
+        <!-- Bot face with blood drop antenna -->
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="7" width="20" height="15" rx="5" fill="white" opacity="0.95"/>
+          <circle cx="9"  cy="14" r="2.2" fill="#3b82f6"/>
+          <circle cx="17" cy="14" r="2.2" fill="#3b82f6"/>
+          <circle cx="9.8"  cy="13.2" r="0.7" fill="white"/>
+          <circle cx="17.8" cy="13.2" r="0.7" fill="white"/>
+          <path d="M9 18.5 Q13 20.5 17 18.5" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <line x1="13" y1="7" x2="13" y2="4" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
+          <path d="M13 1 C13 1 10.5 3.5 10.5 5 C10.5 6.4 11.6 7.5 13 7.5 C14.4 7.5 15.5 6.4 15.5 5 C15.5 3.5 13 1 13 1Z" fill="white" opacity="0.9"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════
+       MODALS
+  ════════════════════════════════════ -->
+
+  <!-- Emergency Modal -->
+  <div class="mo" id="emgM">
+    <div class="modal">
+      <div class="mh red">
+        <div><h3><i class="fas fa-exclamation-triangle"></i> Submit Emergency Request</h3><p>Find life-saving blood in minutes</p></div>
+        <button class="mc" onclick="closeM('emgM')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mb">
+        <div class="frow">
+          <div class="fg"><label>Patient Name</label><input class="fi" id="en" placeholder="Enter patient name"></div>
+          <div class="fg"><label>Blood Group</label>
+            <select class="fi" id="eb"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Units Needed</label><input class="fi" id="eu" type="number" value="1" min="1"></div>
+          <div class="fg"><label>Hospital Name</label><input class="fi" id="eh" placeholder="Where is the patient?"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>City</label><input class="fi" id="ec" placeholder="City name"></div>
+          <div class="fg"><label>Contact Person</label><input class="fi" id="ect" placeholder="Relative/Friend name"></div>
+        </div>
+        <div class="fg"><label>Contact Phone</label><input class="fi" id="ep" placeholder="+91" type="tel"></div>
+        <div class="fg">
+          <label>Urgency Level</label>
+          <div class="uopts">
+            <button class="ubtn sel" onclick="setUrg(this,'critical')"><span style="color:var(--red)">●</span> Critical</button>
+            <button class="ubtn" onclick="setUrg(this,'urgent')"><span style="color:var(--yellow)">●</span> Urgent</button>
+            <button class="ubtn" onclick="setUrg(this,'normal')"><span style="color:var(--blue)">●</span> Normal</button>
+          </div>
+        </div>
+        <button class="bcast-btn" onclick="broadcast()"><i class="fas fa-broadcast-tower"></i> Broadcast Emergency</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login / Signup Modal -->
+  <div class="mo" id="loginM">
+    <div class="modal">
+      <div class="mh dark">
+        <div><h3><i class="fas fa-user-circle"></i> Welcome to BloodBridge</h3></div>
+        <button class="mc" onclick="closeM('loginM')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mb">
+        <div class="atabs">
+          <div class="atab active" onclick="swTab(this,'l')">Login</div>
+          <div class="atab" onclick="swTab(this,'s')">Sign Up</div>
+        </div>
+        <div id="lf">
+          <div class="fg"><label>Email</label><input class="fi" id="le" placeholder="your@email.com" type="email"></div>
+          <div class="fg"><label>Password</label><input class="fi" id="lp" placeholder="••••••••" type="password"></div>
+          <button class="sub-btn" onclick="doLogin()">Login <i class="fas fa-arrow-right"></i></button>
+          <p style="text-align:center;margin-top:1rem;font-size:.78rem;color:var(--muted)">Forgot? <a href="#" style="color:var(--red)">Reset</a></p>
+        </div>
+        <div id="sf" style="display:none">
+          <div class="frow">
+            <div class="fg"><label>Full Name</label><input class="fi" id="sn" placeholder="Your name"></div>
+            <div class="fg"><label>Role</label><select class="fi" id="sr"><option>Patient</option><option>Donor</option><option>Hospital</option></select></div>
+          </div>
+          <div class="fg"><label>Email</label><input class="fi" id="se" placeholder="your@email.com" type="email"></div>
+          <div class="fg"><label>Password</label><input class="fi" id="sp" placeholder="Create password" type="password"></div>
+          <button class="sub-btn" onclick="doSignup()">Create Account <i class="fas fa-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BloodBot Chat Modal -->
+  <div class="mo" id="chatM">
+    <div class="modal chat-modal">
+      <div class="mh blue">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <div style="width:40px;height:40px;background:rgba(255,255,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="7" width="20" height="15" rx="5" fill="white" opacity="0.95"/>
+              <circle cx="9"  cy="14" r="2.2" fill="#3b82f6"/>
+              <circle cx="17" cy="14" r="2.2" fill="#3b82f6"/>
+              <circle cx="9.8"  cy="13.2" r="0.7" fill="white"/>
+              <circle cx="17.8" cy="13.2" r="0.7" fill="white"/>
+              <path d="M9 18.5 Q13 20.5 17 18.5" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              <line x1="13" y1="7" x2="13" y2="4" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
+              <path d="M13 1 C13 1 10.5 3.5 10.5 5 C10.5 6.4 11.6 7.5 13 7.5 C14.4 7.5 15.5 6.4 15.5 5 C15.5 3.5 13 1 13 1Z" fill="white" opacity="0.9"/>
+            </svg>
+          </div>
+          <div><h3 style="margin:0">BloodBot Assistant</h3><p style="margin:0">Ask me anything about blood donation</p></div>
+        </div>
+        <button class="mc" onclick="closeM('chatM')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mb">
+        <div class="chatmsgs" id="chatmsgs">
+          <div class="cmsg bot">👋 Hi! I'm BloodBot. Ask me about blood types, donation, finding donors, or emergencies!</div>
+        </div>
+        <div class="cinrow">
+          <input class="cin" id="cin" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="csend" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Donor Modal -->
+  <div class="mo" id="msgM">
+    <div class="modal">
+      <div class="mh dark">
+        <div><h3><i class="fas fa-comment"></i> Message <span id="mdn">Donor</span></h3></div>
+        <button class="mc" onclick="closeM('msgM')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mb">
+        <div class="msgt" id="msgt"></div>
+        <div style="display:flex;flex-direction:column;gap:.5rem">
+          <div style="display:flex;gap:.5rem">
+            <input class="fi" style="flex:1" id="minp" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendMsg()">
+            <button class="sub-btn" style="width:auto;margin-top:0;padding:.65rem 1rem" onclick="sendMsg()"><i class="fas fa-paper-plane"></i></button>
+          </div>
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <label for="msgReportFile" style="cursor:pointer;font-size:.77rem;color:var(--muted);background:var(--bg3);border:1px solid var(--border);padding:.35rem .7rem;border-radius:8px;white-space:nowrap">
+              <i class="fas fa-paperclip"></i> Attach Report
+            </label>
+            <input type="file" id="msgReportFile" style="display:none" accept=".pdf,.jpg,.jpeg,.png">
+            <span id="msgReportName" style="font-size:.75rem;color:var(--green);font-weight:600"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donor Profile Modal -->
+  <div class="mo" id="dpM">
+    <div class="modal" style="max-width:580px">
+      <button onclick="closeM('dpM')" style="position:absolute;top:.9rem;right:.9rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);width:30px;height:30px;border-radius:8px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center"><i class="fas fa-times"></i></button>
+      <div class="ph" id="dpHead"></div>
+      <div class="ptabs">
+        <div class="ptab active" onclick="swPTab(this,'h')">Donation History</div>
+        <div class="ptab" onclick="swPTab(this,'m')">Medical Info</div>
+        <div class="ptab" onclick="swPTab(this,'s')">Stats</div>
+      </div>
+      <div class="pb" id="dpBody"></div>
+    </div>
+  </div>
+
+  <!-- My Profile Modal -->
+  <div class="mo" id="myProfM">
+    <div class="modal" style="max-width:540px">
+      <div class="mh dark">
+        <div><h3><i class="fas fa-user"></i> My Profile</h3></div>
+        <button class="mc" onclick="closeM('myProfM')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mb">
+        <div style="text-align:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1.3rem">
+          <div style="width:66px;height:66px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.7rem;font-weight:800;margin:0 auto .5rem;color:#fff" id="myAv">M</div>
+          <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:800" id="myN">My Account</div>
+          <div style="font-size:.78rem;color:var(--muted)" id="myR">Patient</div>
+        </div>
+        <div class="scrow">
+          <div class="smc"><div class="smcn">5</div><div class="sml">Donations</div></div>
+          <div class="smc"><div class="smcn">3</div><div class="sml">Lives Saved</div></div>
+          <div class="smc"><div class="smcn" id="myBl">A+</div><div class="sml">Blood Type</div></div>
+        </div>
+
+        <!-- Donor Inbox -->
+        <div id="donorInboxBtn" style="display:none;margin-bottom:.8rem">
+          <button class="sub-btn" style="background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--blue)" onclick="openDonorInboxPanel()">
+            <i class="fas fa-inbox"></i> My Inbox (Messages from Patients)
+          </button>
+        </div>
+
+        <!-- Inbox Panel -->
+        <div id="inboxView" style="display:none;margin-bottom:1rem">
+          <div style="font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:.7rem;text-transform:uppercase;letter-spacing:.5px">Messages Received</div>
+          <div id="donorInboxList" style="display:flex;flex-direction:column;gap:.5rem;max-height:260px;overflow-y:auto"></div>
+        </div>
+
+        <!-- Reply Thread Panel -->
+        <div id="replyView" style="display:none;flex-direction:column;gap:.7rem;margin-bottom:1rem">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <button onclick="document.getElementById('inboxView').style.display='flex';document.getElementById('replyView').style.display='none';" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:8px;cursor:pointer;font-size:.78rem">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <div id="replyThreadTitle" style="font-size:.85rem;font-weight:700;color:var(--text)"></div>
+          </div>
+          <div class="msgt" id="replyThread" style="height:200px"></div>
+          <div style="display:flex;gap:.5rem">
+            <input class="fi" style="flex:1" id="replyInp" placeholder="Type reply..." onkeydown="if(event.key==='Enter')sendReply()">
+            <button class="sub-btn" style="width:auto;margin-top:0;padding:.65rem 1rem" onclick="sendReply()"><i class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+
+        <button class="sub-btn" style="background:transparent;border:1px solid var(--border);color:var(--text);margin-top:0" onclick="doLogout()">
+          <i class="fas fa-sign-out-alt"></i> Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════
+       SCRIPTS — Backend first, then Frontend
+  ════════════════════════════════════ -->
+  
+  <script src="../backend/database.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
